@@ -4,20 +4,19 @@ highlighter:      pygments
 
 # Permalinks
 permalink:        pretty
-relative_permalinks: true
 
 # Setup
-title:            'FsBlog'
-tagline:          'Blogging FSharp'
+title:            'Time to blog'
+tagline:          'Must be advent'
 description:      ''
-url:              https://github.com/colinbull/FsBlog
+url:              https://github.com/jschiefer/jschiefer.github.io
 baseurl:          /
 
 author:
-  name:           'FsBlog'
+  name:           'Hamstr'
   url:            
 
 paginate:         5
 
 github:
-  repo:           https://github.com/colinbull/FsBlog
+  repo:           https://github.com/jschiefer/jschiefer.github.io
