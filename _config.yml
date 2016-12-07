@@ -1,6 +1,6 @@
 # Dependencies
 markdown:         kramdown
-highlighter:      pygments
+highlighter:      rouge
 
 # Permalinks
 permalink:        pretty
@@ -16,6 +16,7 @@ author:
   name:           'Hamstr'
   url:            
 
+gems: 		  [jekyll-paginate]
 paginate:         5
 
 github:
