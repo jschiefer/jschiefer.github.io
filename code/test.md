@@ -28,7 +28,7 @@ platform is F#, which is the same class of languages as Swift or Scala, in that
 it does not force you into an object-oriented paradigm. So let's get started
 with F# on GNU/Linux and you'll see what I mean!
 
-## Hey, what about Mono?
+## Hey, what about that Mono thing?
 
 Glad you asked. Mono, an independent portable reimplmentation of the .Net
 platform is also an option for running F#. At the time of this writing
@@ -84,7 +84,13 @@ all that is required to access a function from a native library is a simple
 declaration, which also uses C syntax! Let's try this out.  The simplest
 possible function that we can identify in the include file is the
 `rtlsdr_get_device_count()` function: It takes no arguments and returns the
-number of compatible devices detected. 
+number of compatible devices detected. The exact declaration in the include file 
+is `RTLSDR_API uint32_t rtlsdr_get_device_count(void)`. How do we translate this
+into a declaration that we can use from F#? 
+
+[explain corresponding data types, general declarations)]
+
+[Native interop in dotnet core](https://docs.microsoft.com/en-us/dotnet/articles/standard/native-interop)
 
 [example: number of devices]
 
