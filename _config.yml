@@ -6,14 +6,14 @@ highlighter:      rouge
 permalink:        pretty
 
 # Setup
-title:            'Time to blog'
-tagline:          'Must be advent'
+title:            'Jan Schiefer'
+tagline:          'Hamstrng knowledge'
 description:      ''
 url:              https://github.com/jschiefer/jschiefer.github.io
 baseurl:          /
 
 author:
-  name:           'Hamstr'
+  name:           'Jan Schiefer'
   url:            
 
 gems: 		  [jekyll-paginate]
