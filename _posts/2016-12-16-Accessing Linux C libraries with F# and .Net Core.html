@@ -1,0 +1,152 @@
+---
+layout: post
+title: 2016-12-16-Accessing Linux C libraries with F# and .Net Core
+date: 2016-12-16T00:20:46.000Z
+categories: F#
+---
+
+<p>This blog post is part of the F# Advent Calendar. Check out the other awesome posts!</p>
+<p>One of my favourite underappreciated technologies in higher-level
+programming platforms or languages is the way they interface with the native
+language of the underlying OS.  Great examples are the Java Native Interface
+(JNI) if the world of Java, the Simple Wrapper and Interface Generator (SWIG)
+in Python or the Android NDK (Native Development Kit). Once you understand this
+stuff and know where to look, not only will you be able to recognize the many
+cases where the latest snazzy high-performance library turns out to be yet
+another repackaging of the same old Fortran libraries (and I am not even
+kidding), you will also be able to wrap your favorite libraries into
+higher-level abstractions.</p>
+<p>I would like to shine a little light on these mechanisms using a recent arrival
+on the GNU/Linux operating system, which is .Net Core. This is Microsoft's
+attempt to become relevant on platforms other than Windows, and while they have
+a little ways to go, the beginnings are promising. The most popular language on
+the various .Net platforms is C#, and it is a great modern, expressive language
+that in my opinion compares favorably with Java. But the real gem of the .Net
+platform is F#, which is the same class of languages as Swift or Scala, in that
+it does not force you into an object-oriented paradigm. So let's get started
+with F# on GNU/Linux and you'll see what I mean!</p>
+<h2>Hey, what about that Mono thing?</h2>
+<p>Glad you asked. Mono, an independent portable reimplmentation of the .Net
+platform is also an option for running F#. At the time of this writing
+(December 2016), the implementation of Mono is much more complete and usable
+than .Net Core. It is also available on many more platforms than .Net Core
+(e.g. various ARM variants). But .Net Core is new and shiny, and it has the
+promise of being much more performant in the long run. It doesn't hurt to have
+both of them installed, and use whatever you feel like. The mechanism described
+below will work with either of them, as will the code in the github repo that
+goes with this blog post.</p>
+<h2>Our target: the RTL-SDR library</h2>
+<p>For this post, I will use the excellent rtl-sdr library as an example, which is
+developed by the great people at Osmocom (a good overview is at
+<a href="http://sdr.osmocom.org/trac/wiki/rtl-sdr).">http://sdr.osmocom.org/trac/wiki/rtl-sdr).</a> This is a library that supports a
+class of very inexpensive USB-based devices for digital TV reception, and turns
+them into a software-defined radio (SDR). This has all sorts of interesting
+applications, and rtl-sdr is a great way to get started, at a very moderate
+cost (the devices are widely available, at a cost of around USD 20). I don't
+have room for an SDR primer, but in a nutshell it works as follows: Your
+configure the center frequency of the receiver, and it begins to sample the
+signals within a certain bandwidth around this center frequenct. These samples
+are then delivered to a software application for further processing. This could
+be for example to test whetehr there is a signal there at all. Or demodulate
+it, in order to listen to the contents of the transmission.</p>
+<p>To get the rtl-sdr library onto your system, you can either build it from
+source, or install it from the package manager that comes with your distro. For
+example, I am on Mint 17.3, so I just have to install librtlsdr-dev, which
+pulls in all the relevant dependencies. One of these dependencies is libusb.
+Look in your package manager for the equivalent library.</p>
+<p>OK, so what did we just install? This is a C libary we are talking about, so we
+are looking for an include file (/usr/include/rtl-sdr.h on my system), and a
+library (for me it is /usr/lib/x86_64-linux-gnu/librtlsdr.so). Oh, and as we
+are talking to external hardware, the permissions need to be set right, which
+is often done through /etc/udev. In my case, the package manager took care of
+this.</p>
+<p>And while I am not talking here about macOS, librtlsdr-dev and its dependencies
+are also available to install via Brew on the Mac, and all the code in this
+post will work the same way. No, I didn't try Windows, but I am sure it can be
+made to work in a similar manner.</p>
+<h2>Talking to native libraries from F#</h2>
+<p>All right, we have the libary, now let's take a look on how to access it from
+F#. The .Net platform has a mechanism called P/Invoke (for "Platform Invoke")
+to access native libraries, which is surprisingly powerful. One nice element to
+it is that with F#, it is purely declarative, which means that in most cases
+all that is required to access a function from a native library is a simple
+declaration, which also uses C syntax! Let's try this out.  The simplest
+possible function that we can identify in the include file is the
+<code>rtlsdr_get_device_count()</code> function: It takes no arguments and returns the
+number of compatible devices detected. The exact declaration in the include file
+is <code>RTLSDR_API uint32_t rtlsdr_get_device_count(void)</code>. How do we translate this
+into a declaration that we can use from F#?</p>
+<p>Here is some C:</p>
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip"><code lang="c">rtlsdr_get_device_count()
+</code></pre></td></tr></table>
+<p>Here is some FSharp:</p>
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+<span class="l">4: </span>
+<span class="l">5: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="i">aa</span> <span class="o">=</span> <span class="i">rtlsdr_set_sample_rate</span>(<span class="i">dev</span>, <span class="n">2560000u</span>)
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="i">ab</span> <span class="o">=</span> <span class="i">rtlsdr_set_center_freq</span>(<span class="i">dev</span>, <span class="n">1000000000u</span>)
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="i">ac</span> <span class="o">=</span> <span class="i">rtlsdr_set_agc_mode</span>(<span class="i">dev</span>, <span class="n">1</span>)
+<span class="k">let</span> <span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="i">bur</span> <span class="o">=</span> <span class="i">rtlsdr_reset_buffer</span>(<span class="i">dev</span>)
+<span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="f">printfn</span> <span class="s">&quot;rtlsdr_reset_buffer returned </span><span class="pf">%A</span><span class="s">&quot;</span> <span onmouseout="hideTip(event, 'fs4', 6)" onmouseover="showTip(event, 'fs4', 6)" class="i">bur</span>
+</code></pre></td>
+</tr>
+</table>
+<p>And even more:</p>
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="i">data</span> <span class="o">=</span> 
+    <span class="i">getAuctionPriceData</span>() 
+    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="f">map</span> (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="i">x</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs9', 11)" onmouseover="showTip(event, 'fs9', 11)" class="i">x</span><span class="o">.</span><span class="i">``UK time``</span>, <span onmouseout="hideTip(event, 'fs9', 12)" onmouseover="showTip(event, 'fs9', 12)" class="i">x</span><span class="o">.</span><span class="i">``30-11-2016``</span>)
+</code></pre></td>
+</tr>
+</table>
+<p>[explain corresponding data types, general declarations)]</p>
+<p><a href="https://docs.microsoft.com/en-us/dotnet/articles/standard/native-interop">Native interop in dotnet core</a></p>
+<p>[example: number of devices]</p>
+<p><code>void blah()</code></p>
+<h2>Why bother with all this?</h2>
+<p>If you are still with me, you may ask yourself, "why bother with all this, and
+not write this code directly in C?" Excellent question, simpler is almost
+always better. What F# gives you is the ability to work on higher levels of
+abstraction. Often what you end up with is code that is substantially easier to
+read and understand than C (and also to write, with a little practice). If you
+have been interested in Software Defined Radio, you may have noticed that
+practitioners in the field really seem to like block diagrams, and have devised
+clever tools to write code that way (see for example Gnu Radio Companion). Why?
+A block diagram gives you an appropriate abstraction to understand the signal
+flow in the application, without pesky details like error handling getting in
+the way of your higher level understanding. It is still there, but it is tucked
+away where you don't need to look at it unless you want to.  F# gives you some
+of the tools to separate out your abstractions, so you can get a similar effect
+using textual programming.</p>
+<p>Here's another lame analogy for you: Imagine cooking a meal in "cooking show
+style"; rather than having some semi-hostile looking vegetables to deal with,
+every ingredient is nicely peeled, chopped, and available for use in its own
+little glass bowl. In my mind, programming with F# is like that: All the
+ingredients are conveniently arranged for you to be creative with, and focus on
+the outcome. True, it comes with investments (bowls) and some cost (washing
+dishes), but the process is so much more enjoyable, which often leads to better
+outcomes.</p>
+<h3>Types without the typing!</h3>
+<h3>Pipes without the, err... never mind</h3>
+<h3>Hide the ugly error handling!</h3>
+<h3>Agents!</h3>
+<h3>Units!!</h3>
+<h2>More F# Information</h2>
+<p>As you may or may not have gathered, the compiler is a powerful beast, and it
+really pays to use its services when writing or editing source code. Regardless
+of what your favorite editor is, there is probably F# support available, with
+smart autocompletion, syntax highlighting and a lot of the other amenities that
+you probably only have seen with full-blown IDEs like Eclipse or IntelliJ. If
+you are not sure where to start, take a look at the excellent VS Code in
+conjunction with the Ionide-FSharp plugin. Another option is monodevelop,
+although the version that ships with your Linux distribution is probably way
+too old.</p>
+
