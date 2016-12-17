@@ -16,8 +16,10 @@ author:
   name:           'Jan Schiefer'
   url:            
 
-gems: 		  [jekyll-paginate]
+gems: 		        [jekyll-paginate]
 paginate:         5
 
 github:
   repo:           https://github.com/jschiefer/jschiefer.github.io
+
+exclude:          [packages, code]
