@@ -6,6 +6,67 @@ categories: F#
 ---
 
 <p>This blog post is part of the F# Advent Calendar. Check out the other awesome posts!</p>
+<p>There are many interesting native libraries available on the Linux platform,
+which are usually accessed directly from C. While C is still a perfectly
+fine programming language for lower-level work, this is 2016, and we can do a little
+better. A lot better, actually. In this post I would like to show a few
+of the benefits that you gain when you use a modern "multi-paradigm" language
+like F#, which allows you to write code in ways that you may not have seen before.
+I am assuming a working knowledge of C and Linux, but not much else.</p>
+<p>"Waitwhat, isn't F# some Microsoft thing?" I hear you say. Yes, it came out of
+Microsoft Research, but it has matured into an
+<a href="https://github.com/fsharp/fsharp">OSS language</a> with an
+<a href="https://github.com/fsharp/fsharp/blob/master/LICENSE">Apache license</a> and a
+small-ish, but enthusiastic and friendly OSS community. F# compiles into
+<a href="https://fable-compiler.github.io/">Javascript</a> or the Microsoft .Net
+platform in one of its many incarnations. I will be focusing on the (somewhat
+adolescent) <a href="http://dot.net/core">.Net Core</a>, because it has a lot of potential
+and is available on Linux, macOS and Windows.
+One of the things .Net does really well is integrate with the underlying
+native platform, using a declarative mechanism called PInvoke.
+So even if you don't like Microsoft and the .Net platform
+(and believe me, I used to be in that camp), please hold your nose and read on.
+Or even better, install .Net Core for your platform (important: use the Long Term support
+(LTS) version, open your shell,
+cast the magic spell</p>
+<table class="pre"><tr><td class="lines"><pre class="fssnip"><span class="l">1: </span>
+<span class="l">2: </span>
+<span class="l">3: </span>
+<span class="l">4: </span>
+<span class="l">5: </span>
+</pre></td>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="i">dotnet</span> <span class="k">new</span> <span class="o">--</span><span class="i">lang</span> <span class="i">fsharp</span>
+<span class="i">dotnet</span> <span class="i">restore</span>
+<span class="i">dotnet</span> <span class="i">build</span>
+<span class="i">dotnet</span> <span class="i">run</span>
+<span class="i">vi</span> <span class="i">Program</span><span class="o">.</span><span class="i">fs</span>
+</code></pre></td>
+</tr>
+</table>
+<p>and follow along!</p>
+<p>Did I just say "vi"? Sorry, old habits die hard. I should probably mention that
+F# <em>greatly</em> benefits from a language-aware editor, which can offer assistance as
+you work with your code. As F# is a strongly typed language, the editor can offer
+quite a lot of help in identifying incorrect constructs before you even compile.
+There are F# plugins
+<a href="http://fsharp.org/guides/mac-linux-cross-platform/#editing">for all sorts of editors</a>
+<a href="https://github.com/fsharp/emacs-fsharp-mode">(even Emacs!)</a>).
+If you don't know where to start, try the excellent
+<a href="https://code.visualstudio.com/">Visual Studio Code</a> with the awesome
+<a href="http://ionide.io/">Ionide-fsharp plugin</a>. And there is
+<a href="https://marketplace.visualstudio.com/items?itemName=vscodevim.vim">at least one good vi plugin</a>
+available.</p>
+<p>What about Mono? I am glad you asked!
+<a href="http://www.mono-project.com/">Mono, an independent portable reimplementation of the .Net platform</a>
+is also an option for running F#. At the time of this writing
+(December 2016), the implementation of Mono is much more complete and usable
+than .Net Core. It is also available on many more platforms than .Net Core
+(e.g. various ARM variants). But .Net Core is new and shiny, and it has the
+promise of being much more performant in the long run. It doesn't hurt to have
+both of them installed, and use whatever you feel like. The mechanism described
+below will work with either of them, as will the
+<a href="https://github.com/jschiefer/RadioLambda">code in the github repo that goes with this blog post</a>.</p>
+<h2>Our target: the RTL-SDR library</h2>
 <p>One of my favourite underappreciated technologies in higher-level
 programming platforms or languages is the way they interface with the native
 language of the underlying OS.  Great examples are the Java Native Interface
@@ -26,16 +87,6 @@ platform is F#, which is the same class of languages as Swift or Scala, in that
 it does not force you into an object-oriented paradigm. So let's get started
 with F# on GNU/Linux and you'll see what I mean!</p>
 <h2>Hey, what about that Mono thing?</h2>
-<p>Glad you asked. Mono, an independent portable reimplmentation of the .Net
-platform is also an option for running F#. At the time of this writing
-(December 2016), the implementation of Mono is much more complete and usable
-than .Net Core. It is also available on many more platforms than .Net Core
-(e.g. various ARM variants). But .Net Core is new and shiny, and it has the
-promise of being much more performant in the long run. It doesn't hurt to have
-both of them installed, and use whatever you feel like. The mechanism described
-below will work with either of them, as will the code in the github repo that
-goes with this blog post.</p>
-<h2>Our target: the RTL-SDR library</h2>
 <p>For this post, I will use the excellent rtl-sdr library as an example, which is
 developed by the great people at Osmocom (a good overview is at
 <a href="http://sdr.osmocom.org/trac/wiki/rtl-sdr).">http://sdr.osmocom.org/trac/wiki/rtl-sdr).</a> This is a library that supports a
@@ -88,11 +139,11 @@ into a declaration that we can use from F#?</p>
 <span class="l">4: </span>
 <span class="l">5: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="i">aa</span> <span class="o">=</span> <span class="i">rtlsdr_set_sample_rate</span>(<span class="i">dev</span>, <span class="n">2560000u</span>)
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="i">ab</span> <span class="o">=</span> <span class="i">rtlsdr_set_center_freq</span>(<span class="i">dev</span>, <span class="n">1000000000u</span>)
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="i">ac</span> <span class="o">=</span> <span class="i">rtlsdr_set_agc_mode</span>(<span class="i">dev</span>, <span class="n">1</span>)
-<span class="k">let</span> <span onmouseout="hideTip(event, 'fs4', 4)" onmouseover="showTip(event, 'fs4', 4)" class="i">bur</span> <span class="o">=</span> <span class="i">rtlsdr_reset_buffer</span>(<span class="i">dev</span>)
-<span onmouseout="hideTip(event, 'fs5', 5)" onmouseover="showTip(event, 'fs5', 5)" class="f">printfn</span> <span class="s">&quot;rtlsdr_reset_buffer returned </span><span class="pf">%A</span><span class="s">&quot;</span> <span onmouseout="hideTip(event, 'fs4', 6)" onmouseover="showTip(event, 'fs4', 6)" class="i">bur</span>
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span class="i">aa</span> <span class="o">=</span> <span class="i">rtlsdr_set_sample_rate</span>(<span class="i">dev</span>, <span class="n">2560000u</span>)
+<span class="k">let</span> <span class="i">ab</span> <span class="o">=</span> <span class="i">rtlsdr_set_center_freq</span>(<span class="i">dev</span>, <span class="n">1000000000u</span>)
+<span class="k">let</span> <span class="i">ac</span> <span class="o">=</span> <span class="i">rtlsdr_set_agc_mode</span>(<span class="i">dev</span>, <span class="n">1</span>)
+<span class="k">let</span> <span class="i">bur</span> <span class="o">=</span> <span class="i">rtlsdr_reset_buffer</span>(<span class="i">dev</span>)
+<span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="i">printfn</span> <span class="s">&quot;rtlsdr_reset_buffer returned %A&quot;</span> <span class="i">bur</span>
 </code></pre></td>
 </tr>
 </table>
@@ -101,9 +152,9 @@ into a declaration that we can use from F#?</p>
 <span class="l">2: </span>
 <span class="l">3: </span>
 </pre></td>
-<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span onmouseout="hideTip(event, 'fs6', 7)" onmouseover="showTip(event, 'fs6', 7)" class="i">data</span> <span class="o">=</span> 
+<td class="snippet"><pre class="fssnip highlighted"><code lang="fsharp"><span class="k">let</span> <span class="i">data</span> <span class="o">=</span> 
     <span class="i">getAuctionPriceData</span>() 
-    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs7', 8)" onmouseover="showTip(event, 'fs7', 8)" class="t">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs8', 9)" onmouseover="showTip(event, 'fs8', 9)" class="f">map</span> (<span class="k">fun</span> <span onmouseout="hideTip(event, 'fs9', 10)" onmouseover="showTip(event, 'fs9', 10)" class="i">x</span> <span class="k">-&gt;</span> <span onmouseout="hideTip(event, 'fs9', 11)" onmouseover="showTip(event, 'fs9', 11)" class="i">x</span><span class="o">.</span><span class="i">``UK time``</span>, <span onmouseout="hideTip(event, 'fs9', 12)" onmouseover="showTip(event, 'fs9', 12)" class="i">x</span><span class="o">.</span><span class="i">``30-11-2016``</span>)
+    <span class="o">|&gt;</span> <span onmouseout="hideTip(event, 'fs2', 2)" onmouseover="showTip(event, 'fs2', 2)" class="i">Seq</span><span class="o">.</span><span onmouseout="hideTip(event, 'fs3', 3)" onmouseover="showTip(event, 'fs3', 3)" class="i">map</span> (<span class="k">fun</span> <span class="i">x</span> <span class="k">-&gt;</span> <span class="i">x</span><span class="o">.</span><span class="i">``UK time``</span>, <span class="i">x</span><span class="o">.</span><span class="i">``30-11-2016``</span>)
 </code></pre></td>
 </tr>
 </table>

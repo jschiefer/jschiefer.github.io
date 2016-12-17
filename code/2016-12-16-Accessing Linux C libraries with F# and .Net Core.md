@@ -1,6 +1,64 @@
 
 This blog post is part of the F# Advent Calendar. Check out the other awesome posts!
 
+There are many interesting native libraries available on the Linux platform,
+which are usually accessed directly from C. While C is still a perfectly 
+fine programming language for lower-level work, this is 2016, and we can do a little 
+better. A lot better, actually. In this post I would like to show a few 
+of the benefits that you gain when you use a modern "multi-paradigm" language
+like F#, which allows you to write code in ways that you may not have seen before. 
+I am assuming a working knowledge of C and Linux, but not much else.
+
+"Waitwhat, isn't F# some Microsoft thing?" I hear you say. Yes, it came out of
+Microsoft Research, but it has matured into an 
+[OSS language](https://github.com/fsharp/fsharp) with an 
+[Apache license](https://github.com/fsharp/fsharp/blob/master/LICENSE) and a
+small-ish, but enthusiastic and friendly OSS community. F# compiles into
+[Javascript](https://fable-compiler.github.io/) or the Microsoft .Net 
+platform in one of its many incarnations. I will be focusing on the (somewhat
+adolescent) [.Net Core](http://dot.net/core), because it has a lot of potential 
+and is available on Linux, macOS and Windows.
+One of the things .Net does really well is integrate with the underlying 
+native platform, using a declarative mechanism called PInvoke. 
+So even if you don't like Microsoft and the .Net platform
+(and believe me, I used to be in that camp), please hold your nose and read on.
+Or even better, install .Net Core for your platform (important: use the Long Term support
+(LTS) version, open your shell,
+cast the magic spell
+
+    dotnet new --lang fsharp
+    dotnet restore
+    dotnet build
+    dotnet run
+    vi Program.fs
+
+and follow along!
+
+Did I just say "vi"? Sorry, old habits die hard. I should probably mention that
+F# *greatly* benefits from a language-aware editor, which can offer assistance as
+you work with your code. As F# is a strongly typed language, the editor can offer
+quite a lot of help in identifying incorrect constructs before you even compile.
+There are F# plugins 
+[for all sorts of editors](http://fsharp.org/guides/mac-linux-cross-platform/#editing)
+[(even Emacs!)](https://github.com/fsharp/emacs-fsharp-mode)). 
+If you don't know where to start, try the excellent
+[Visual Studio Code](https://code.visualstudio.com/) with the awesome
+[Ionide-fsharp plugin](http://ionide.io/). And there are several vi plugins available for VS Code 
+[(I use this one)](https://marketplace.visualstudio.com/items?itemName=vscodevim.vim).
+
+What about Mono? I am glad you asked! 
+[Mono, an independent portable reimplementation of the .Net platform](http://www.mono-project.com/)
+is also an option for running F#. At the time of this writing
+(December 2016), the implementation of Mono is much more complete and usable
+than .Net Core. Mono is also available on many more processor architectures
+(e.g. ARM). But .Net Core is new and shiny, and it has the
+promise of being much more performant in the long run. It doesn't hurt to have
+both of them installed, and use whatever you feel like. The mechanism described
+below will work with either of them, as will the 
+[code in the github repo that goes with this blog post](https://github.com/jschiefer/RadioLambda).
+
+## Our target: the RTL-SDR library
+
 One of my favourite underappreciated technologies in higher-level
 programming platforms or languages is the way they interface with the native
 language of the underlying OS.  Great examples are the Java Native Interface
@@ -24,17 +82,6 @@ with F# on GNU/Linux and you'll see what I mean!
 
 ## Hey, what about that Mono thing?
 
-Glad you asked. Mono, an independent portable reimplmentation of the .Net
-platform is also an option for running F#. At the time of this writing
-(December 2016), the implementation of Mono is much more complete and usable
-than .Net Core. It is also available on many more platforms than .Net Core
-(e.g. various ARM variants). But .Net Core is new and shiny, and it has the
-promise of being much more performant in the long run. It doesn't hurt to have
-both of them installed, and use whatever you feel like. The mechanism described
-below will work with either of them, as will the code in the github repo that
-goes with this blog post.
-
-## Our target: the RTL-SDR library
 
 For this post, I will use the excellent rtl-sdr library as an example, which is
 developed by the great people at Osmocom (a good overview is at
