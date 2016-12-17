@@ -53,15 +53,14 @@ There are F# plugins
 <a href="https://github.com/fsharp/emacs-fsharp-mode">(even Emacs!)</a>).
 If you don't know where to start, try the excellent
 <a href="https://code.visualstudio.com/">Visual Studio Code</a> with the awesome
-<a href="http://ionide.io/">Ionide-fsharp plugin</a>. And there is
-<a href="https://marketplace.visualstudio.com/items?itemName=vscodevim.vim">at least one good vi plugin</a>
-available.</p>
+<a href="http://ionide.io/">Ionide-fsharp plugin</a>. And there are several vi plugins available for VS Code
+<a href="https://marketplace.visualstudio.com/items?itemName=vscodevim.vim">(I use this one)</a>.</p>
 <p>What about Mono? I am glad you asked!
 <a href="http://www.mono-project.com/">Mono, an independent portable reimplementation of the .Net platform</a>
 is also an option for running F#. At the time of this writing
 (December 2016), the implementation of Mono is much more complete and usable
-than .Net Core. It is also available on many more platforms than .Net Core
-(e.g. various ARM variants). But .Net Core is new and shiny, and it has the
+than .Net Core. Mono is also available on many more processor architectures
+(e.g. ARM). But .Net Core is new and shiny, and it has the
 promise of being much more performant in the long run. It doesn't hurt to have
 both of them installed, and use whatever you feel like. The mechanism described
 below will work with either of them, as will the
@@ -86,7 +85,6 @@ that in my opinion compares favorably with Java. But the real gem of the .Net
 platform is F#, which is the same class of languages as Swift or Scala, in that
 it does not force you into an object-oriented paradigm. So let's get started
 with F# on GNU/Linux and you'll see what I mean!</p>
-<h2>Hey, what about that Mono thing?</h2>
 <p>For this post, I will use the excellent rtl-sdr library as an example, which is
 developed by the great people at Osmocom (a good overview is at
 <a href="http://sdr.osmocom.org/trac/wiki/rtl-sdr).">http://sdr.osmocom.org/trac/wiki/rtl-sdr).</a> This is a library that supports a
@@ -200,4 +198,8 @@ you are not sure where to start, take a look at the excellent VS Code in
 conjunction with the Ionide-FSharp plugin. Another option is monodevelop,
 although the version that ships with your Linux distribution is probably way
 too old.</p>
+
+<div class="tip" id="fs1">val printfn : format:Printf.TextWriterFormat&lt;&#39;T&gt; -&gt; &#39;T<br /><br />Full name: Microsoft.FSharp.Core.ExtraTopLevelOperators.printfn</div>
+<div class="tip" id="fs2">module Seq<br /><br />from Microsoft.FSharp.Collections</div>
+<div class="tip" id="fs3">val map : mapping:(&#39;T -&gt; &#39;U) -&gt; source:seq&lt;&#39;T&gt; -&gt; seq&lt;&#39;U&gt;<br /><br />Full name: Microsoft.FSharp.Collections.Seq.map</div>
 

@@ -58,7 +58,6 @@ below will work with either of them, as will the
 [code in the github repo that goes with this blog post](https://github.com/jschiefer/RadioLambda).
 
 ## Our target: the RTL-SDR library
-
 One of my favourite underappreciated technologies in higher-level
 programming platforms or languages is the way they interface with the native
 language of the underlying OS.  Great examples are the Java Native Interface
@@ -79,8 +78,6 @@ that in my opinion compares favorably with Java. But the real gem of the .Net
 platform is F#, which is the same class of languages as Swift or Scala, in that
 it does not force you into an object-oriented paradigm. So let's get started
 with F# on GNU/Linux and you'll see what I mean!
-
-## Hey, what about that Mono thing?
 
 
 For this post, I will use the excellent rtl-sdr library as an example, which is
