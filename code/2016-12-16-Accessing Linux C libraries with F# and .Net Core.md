@@ -1,202 +1,333 @@
-
-This blog post is part of the F# Advent Calendar. Check out the other awesome posts!
+# Accessing native C libraries on Linux with F# and .Net Core
+This blog post is part of [Sergey Tihon](https://twitter.com/sergey_tihon)'s 
+[F# Advent Calendar in English 2016](https://sergeytihon.wordpress.com/2016/10/23/f-advent-calendar-in-english-2016/).
+Make sure to check out the other awesome posts!
 
 There are many interesting native libraries available on the Linux platform,
-which are usually accessed directly from C. While C is still a perfectly 
-fine programming language for lower-level work, this is 2016, and we can do a little 
-better. A lot better, actually. In this post I would like to show a few 
-of the benefits that you gain when you use a modern "multi-paradigm" language
-like F#, which allows you to write code in ways that you may not have seen before. 
+which are usually accessed directly from C programs. There will likely be more of these 
+in the future; for example, libraries to program custom hardware accelerators, for which no 
+operating system support is available. C is still a perfectly 
+fine programming language for lower-level work, but this is 2016, and we can do 
+better. In this post I would like to introduce a few of the benefits that you gain 
+when you use a modern "multi-paradigm" language like F# to access native libraries.
+This allows you to write code in interesting ways that you may not have seen before. 
 I am assuming a working knowledge of C and Linux, but not much else.
 
 "Waitwhat, isn't F# some Microsoft thing?" I hear you say. Yes, it came out of
-Microsoft Research, but it has matured into an 
+Microsoft Research several years ago. In the meantime, it has grown up into a mature 
 [OSS language](https://github.com/fsharp/fsharp) with an 
 [Apache license](https://github.com/fsharp/fsharp/blob/master/LICENSE) and a
-small-ish, but enthusiastic and friendly OSS community. F# compiles into
-[Javascript](https://fable-compiler.github.io/) or the Microsoft .Net 
+small-ish, but enthusiastic, friendly and helpful OSS community. F# 
+[compiles into Javascript](https://fable-compiler.github.io/) or the Microsoft .Net 
 platform in one of its many incarnations. I will be focusing on the (somewhat
-adolescent) [.Net Core](http://dot.net/core), because it has a lot of potential 
-and is available on Linux, macOS and Windows.
+adolescent) [.Net Core](http://dot.net/core), as it has a lot of promise
+and is available today on Linux, macOS and Windows.
+
 One of the things .Net does really well is integrate with the underlying 
-native platform, using a declarative mechanism called PInvoke. 
+native platform, using a declarative mechanism called P/Invoke. 
 So even if you don't like Microsoft and the .Net platform
 (and believe me, I used to be in that camp), please hold your nose and read on.
-Or even better, install .Net Core for your platform (important: use the Long Term support
-(LTS) version, open your shell,
-cast the magic spell
+Or even better, install *the LTS version* of .Net Core for your platform, open your shell,
+and cast the magic spell:
 
     dotnet new --lang fsharp
-    dotnet restore
-    dotnet build
-    dotnet run
     vi Program.fs
 
-and follow along!
-
-Did I just say "vi"? Sorry, old habits die hard. I should probably mention that
+Wait - did I just say "vi"? Sorry, old habits die hard. I should probably mention that
 F# *greatly* benefits from a language-aware editor, which can offer assistance as
 you work with your code. As F# is a strongly typed language, the editor can offer
 quite a lot of help in identifying incorrect constructs before you even compile.
 There are F# plugins 
 [for all sorts of editors](http://fsharp.org/guides/mac-linux-cross-platform/#editing)
-[(even Emacs!)](https://github.com/fsharp/emacs-fsharp-mode)). 
+[(even Emacs, if you must)](https://github.com/fsharp/emacs-fsharp-mode)). 
 If you don't know where to start, try the excellent
 [Visual Studio Code](https://code.visualstudio.com/) with the awesome
 [Ionide-fsharp plugin](http://ionide.io/). And there are several vi plugins available for VS Code 
 [(I use this one)](https://marketplace.visualstudio.com/items?itemName=vscodevim.vim).
 
-What about Mono? I am glad you asked! 
-[Mono, an independent portable reimplementation of the .Net platform](http://www.mono-project.com/)
-is also an option for running F#. At the time of this writing
-(December 2016), the implementation of Mono is much more complete and usable
-than .Net Core. Mono is also available on many more processor architectures
-(e.g. ARM). But .Net Core is new and shiny, and it has the
-promise of being much more performant in the long run. It doesn't hurt to have
-both of them installed, and use whatever you feel like. The mechanism described
-below will work with either of them, as will the 
-[code in the github repo that goes with this blog post](https://github.com/jschiefer/RadioLambda).
+## Interfacing to native code
+Whenever a program executes on a virtual machine (VM) of some sort, like the 
+Java Virtual Machine (JVM), the .Net Common Language Runtime (CLR) or the 
+Python interpreter, it is isolated from the underlying operating system, which
+is often a good thing. For example, the Virtual Machine might be 
+uniquely matched to the programming language or problem domain, made more 
+secure, be operating system independent, etc. Sometimes however, there is a requirement
+for a VM based application to directly use a native library, for example to gain
+access to some OS-specific service not provided by the VM, custom hardware, etc. These native
+libraries are typically written in the native programming language of the underlying operating 
+system, or the implementation language of the VM itself. Often, this is language is C. 
+
+Here are a few examples of Virtual Machines and the corresponding interop technologies for
+accessing native libraries:
+
+ Virtual Machine | Interop Technology 
+ ---------------- | -------------------
+ Java Virtual Machine | Java Native Interface (JNI) 
+ .Net CLR | P/Invoke
+ Android Dalvik VM | Android Native Development Kit (NDK) 
+ Python Interpreter | Simple Wrapper and Interface Generator (SWIG) 
+
+.Net's P/Invoke mechanism is a lot slicker than many of the alternatives,
+because it is purely declarative; you can link to arbitrary code in 
+arbitrary shared libraries without having to write shims or native adapter code. 
+For each entry point (function) in the shared library, 
+all you have to do is proivde declarations that define the data types involved, 
+how they might need to be translated, specify the alignment etc., and you are 
+done. You do all this in your high-level language.
+
+Contrast this with Java's JNI, where you 
+actually need to write a glue layer in C or C++, that handles each and
+every method invocation. What is worst about this is that now you have
+another native library to deal with (the JNI glue), which makes cross-platform 
+portability so much harder. And if you want to dispatch a callback from C
+back into your JVM code, [good luck](http://stackoverflow.com/questions/4313004/registering-java-function-as-a-callback-in-c-function/4330239#4330239)!
+In F#, you can do the equivalent in a few lines of F# code. 
+Wrapper generators (such as the excellent [SWIG](http://swig.org/)) can make this task
+easier. With .Net, this is also possible (using C#), but rarely necessary.
+
+From a high level, interoperating between a VM language (e.g. F#) and a native languages 
+(e.g. C) requires figuring out several issues:
+* What are the library naming conventions on the OS? Where are these libraries stored? 
+How do they get found and loaded?
+* What are the names of the entry points for the functions that are contained in the library?
+* What are the calling conventions, i.e. who is responsible for cleaning up the stack after the
+invocation, the caller or the callee?
+* Is the byte sex the same on both sides (little endian/big endian)
+* How do C and F# function arguments correspond? If they are not the same, how are the translated
+("marshalled") into one another?
+* If there are structures, how are they aligned in memory? Is there padding between individual elements?
+* Who owns any memory blocks that pass the boundary? Who gets to allocate or free them?
+* How do you stop important data structures on the VM from getting garbage collected?
+* Is it computationally expensive to cross the boundary between VM and native code?
+* How do you call back from native code into VM code? Is it OK for any thread to do this, or are
+there special restrictions?
+
+P/Invoke allows you to address most if not all of those questions in a purely declarative manner, 
+i.e. without having to write any shims or other adapter libraries. Don't be intimidated by the 
+length of this list; once the appropriate declarations are written, it is very comfortable and
+easy to write code that uses native libraries! 
 
 ## Our target: the RTL-SDR library
-One of my favourite underappreciated technologies in higher-level
-programming platforms or languages is the way they interface with the native
-language of the underlying OS.  Great examples are the Java Native Interface
-(JNI) if the world of Java, the Simple Wrapper and Interface Generator (SWIG)
-in Python or the Android NDK (Native Development Kit). Once you understand this
-stuff and know where to look, not only will you be able to recognize the many
-cases where the latest snazzy high-performance library turns out to be yet
-another repackaging of the same old Fortran libraries (and I am not even
-kidding), you will also be able to wrap your favorite libraries into
-higher-level abstractions. 
-
-I would like to shine a little light on these mechanisms using a recent arrival
-on the GNU/Linux operating system, which is .Net Core. This is Microsoft's
-attempt to become relevant on platforms other than Windows, and while they have
-a little ways to go, the beginnings are promising. The most popular language on
-the various .Net platforms is C#, and it is a great modern, expressive language
-that in my opinion compares favorably with Java. But the real gem of the .Net
-platform is F#, which is the same class of languages as Swift or Scala, in that
-it does not force you into an object-oriented paradigm. So let's get started
-with F# on GNU/Linux and you'll see what I mean!
-
-
-For this post, I will use the excellent rtl-sdr library as an example, which is
-developed by the great people at Osmocom (a good overview is at
-http://sdr.osmocom.org/trac/wiki/rtl-sdr). This is a library that supports a
-class of very inexpensive USB-based devices for digital TV reception, and turns
-them into a software-defined radio (SDR). This has all sorts of interesting
-applications, and rtl-sdr is a great way to get started, at a very moderate
-cost (the devices are widely available, at a cost of around USD 20). I don't
-have room for an SDR primer, but in a nutshell it works as follows: Your
-configure the center frequency of the receiver, and it begins to sample the
-signals within a certain bandwidth around this center frequenct. These samples
-are then delivered to a software application for further processing. This could
-be for example to test whetehr there is a signal there at all. Or demodulate
-it, in order to listen to the contents of the transmission.
+For this discussion, I will use the excellent rtl-sdr library as an example.
+SDR stands for Software Defined Radio, where radio communications components
+(such as for example mixers, filters, demodulators etc.)
+that were traditionally implemented in hardware, get replaced by software.
+What remains of the hardware radio is typically a frontend, a downconverter
+of some sort, some filtering, a fast analog-to-digital converter to
+sample the incoming radio signal into (large amounts of) numbers and
+a high-speed digital interface to send said bits into the computer. 
+Sounds expensive? It used to be, until a few years ago, when 
+[some smart people figured out](http://rtlsdr.org/#history_and_discovery_of_rtlsdr)
+how to take a cheap (USD 20) mass-produced USB-stick that was intended for
+TV reception, and turn it into a general purpose SDR radio. Not exactly
+stellar performance, but the price is right. A library was developed that
+provides access to the hardware, which is called librtlsdr. Find a detailed
+description [here](http://sdr.osmocom.org/trac/wiki/rtl-sdr). If you want 
+to buy one of these devices, here is 
+[an extensive list of compatible devices](https://www.reddit.com/r/RTLSDR/wiki/compatibility).
 
 To get the rtl-sdr library onto your system, you can either build it from
 source, or install it from the package manager that comes with your distro. For
-example, I am on Mint 17.3, so I just have to install librtlsdr-dev, which
-pulls in all the relevant dependencies. One of these dependencies is libusb.
-Look in your package manager for the equivalent library. 
+example, I am on Mint 17.3 (an Ubuntu derivative), so I can just use 
+
+    sudo apt-get install librtlsdr-dev
+
+This will pull in all the relevant dependencies, notably libusb.
 
 OK, so what did we just install? This is a C libary we are talking about, so we
-are looking for an include file (/usr/include/rtl-sdr.h on my system), and a
-library (for me it is /usr/lib/x86_64-linux-gnu/librtlsdr.so). Oh, and as we
+are looking for an include file (`/usr/include/rtl-sdr.h` on my system), and a
+library (for me it is `/usr/lib/x86_64-linux-gnu/librtlsdr.so`). Oh, and as we
 are talking to external hardware, the permissions need to be set right, which
-is often done through /etc/udev. In my case, the package manager took care of
-this. 
+is often done through `/etc/udev`. In my case, the package manager took care of
+this. If you have permission trouble with access to the hardware, check 
+the udev configuration.
 
-And while I am not talking here about macOS, librtlsdr-dev and its dependencies
-are also available to install via Brew on the Mac, and all the code in this
-post will work the same way. No, I didn't try Windows, but I am sure it can be
-made to work in a similar manner.
+And while this article is about Linux, librtlsdr-dev and its dependencies
+are also available to install via Brew on macOS, and if you do that, all the 
+code in this post will work the same way on your Mac. I didn't try Windows (the
+installation of libusb and librtlsdr is a little more involved there), 
+but it shouldn't be too hard to get it to work on Windows also.
 
-## Talking to native libraries from F#
-
+## Talking to librtlsdr from F#
 All right, we have the libary, now let's take a look on how to access it from
-F#. The .Net platform has a mechanism called P/Invoke (for "Platform Invoke")
-to access native libraries, which is surprisingly powerful. One nice element to
-it is that with F#, it is purely declarative, which means that in most cases
-all that is required to access a function from a native library is a simple
-declaration, which also uses C syntax! Let's try this out.  The simplest
-possible function that we can identify in the include file is the
-`rtlsdr_get_device_count()` function: It takes no arguments and returns the
-number of compatible devices detected. The exact declaration in the include file 
-is `RTLSDR_API uint32_t rtlsdr_get_device_count(void)`. How do we translate this
-into a declaration that we can use from F#? 
-
-Here is some C:
+F#. Remember what I said above about P/Invoke being purely declarative? Let's
+try this out! The simplest possible function that we can identify in the `/usr/include/rtl-sdr.h` 
+include file is the `rtlsdr_get_device_count()` function: 
 
     [lang=c]
-    rtlsdr_get_device_count()
+    RTLSDR_API uint32_t rtlsdr_get_device_count(void);
 
-Here is some FSharp:
+What is this? The `RTLSDR_API` thing expands to an import or export statement, depending
+whether the library itself is being compiled or a program that uses it. From our 
+perspective, this is equivalent to an `extern` declaration. `uint32_t` is a pretty 
+obvious typedef. So armed with this knowledge, we can write a declaration to make
+this function callable from F#:
 
-    let aa = rtlsdr_set_sample_rate(dev, 2560000u)
-    let ab = rtlsdr_set_center_freq(dev, 1000000000u)
-    let ac = rtlsdr_set_agc_mode(dev, 1)
-    let bur = rtlsdr_reset_buffer(dev)
-    printfn "rtlsdr_reset_buffer returned %A" bur
+    [<DllImport("librtlsdr", CallingConvention=CallingConvention.Cdecl)>]
+    extern uint32 rtlsdr_get_device_count()
+    
+The `[<Stuff>]` is called an Attribute. This specific attribute is called 
+DllImportAttribute. DLL is Windows-speak for a shared library, otherwise 
+known as a .so (or .dylib if you are on macOS), 
+"librtlsdr" is obviously the name of the library,
+and the calling convention specifies who is responsible for cleaning up the stack
+after the call. 
 
-And even more:
+Let's try and write a tiny little F# program
+that loads the C library, and sees whether we have any RTL-SDR devices attached.
+I am assuming you have .Net Core installed (the RTL version, right?), as well
+as the rtlsdr library. As long you have those two prerequisites, 
+it shouldn't matter whether you are on Linux, macOS or Windows, we all value
+diversity! Now create an empty directory, cd into it, and do the following:
 
-    let data = 
-        getAuctionPriceData() 
-        |> Seq.map (fun x -> x.``UK time``, x.``30-11-2016``)
+    dotnet new --lang fsharp
+    dotnet restore
+    dotnet build
+    dotnet run
 
-[explain corresponding data types, general declarations)]
+This will do a few things:
 
-[Native interop in dotnet core](https://docs.microsoft.com/en-us/dotnet/articles/standard/native-interop)
+* create two new files: `Program.fs` and `project.json` 
+* fetch any dependencies 
+* build an executable 
+* run it. 
 
-[example: number of devices]
+If this says "Hello World!", you are in business (and yes, they forgot 
+the comma between "Hello" and "World". Get a life!).
+Now open `Program.fs` in an editor and replace
+the code in that file with the following:
 
-`void blah()`
+    open System.Runtime.InteropServices
 
-## Why bother with all this? 
+    [<DllImport("librtlsdr", CallingConvention=CallingConvention.Cdecl)>]
+    extern uint32 rtlsdr_get_device_count()
+
+    [<EntryPoint>]
+    let main argv = 
+        rtlsdr_get_device_count() |> printfn "Found %A device(s)"
+        0
+
+Hang on - what's with that syntax? OK, line 1 is some boring import/use/open/whatever.
+We talked about lines 3-4 before, this is just the declaration that tells the system
+how to call the function `rtlsdr_get_device_count()` in the library "librtlsdr".
+The EntryPoint is pretty obviously the main function, starting in line 7.
+
+You already know what the funny `|>` in line 8 is. No, believe me, you do. It is called a pipe. 
+As in `ls | grep foo`. In this case, we send the output of the `rtlsdr_get_device_count()` into
+the function `printfn` (as its last argument, to be precise). This is really easy to get used to! 
+
+Now save `Program.fs`, and issue another
+
+    dotnet run
+
+In response, it will hopefully say something like:
+
+    Project tmp (.NETCoreApp,Version=v1.0) will be compiled because inputs were modified
+    Compiling tmp for .NETCoreApp,Version=v1.0
+
+    Compilation succeeded.
+        0 Warning(s)
+        0 Error(s)
+
+    Time elapsed 00:00:07.3866507
+
+    Found 1u devices
+
+Well, that was easy! The machinery was able to figure out that you need to 
+build things before running them, and depending on whether or not you have one of 
+those nifty USB devices in your computer, it will report 0u or 1u devices. But what is
+a `1u`? This would be a good time to talk about types.
+
+You wouldn't know it from looking at the source code, but F# is a strongly typed
+language, and I mean *strongly*. It will not take an unsigned integer in place of a
+signed one, or make an int into a float until you explicitely instruct it to do so.
+
+But if this a typed language, where are the wordy annoying type declarations in
+the code above? Does main have a type, and if so, what is it? Well, `main` is of the type
+`string[] -> int`, which means that it is a function that takes an array of strings
+and returns a signed 32-bit integer. And in fact, the seemingly unmotivated `0` in line 9
+is the return value of main. You can verify this by replacing the `0` with a string
+`"foo"`, and see what the compiler says: It will yell at you for trying to 
+return a string, where an integer was required. 
+
+One of the nice things about F# is that you don't have to constantly remind it of
+the types of everything - types are inferred (I call it "types without the typing").
+What this means is that the compiler can usually figure out the types by itself, and
+check for consistency. If it can't, it will tell you with an error message, and 
+usually a simple type annotation or two is all the guidance it needs.
+You get all the benefits of strong typing (compile-time or even edit-time error 
+checking) without the cost (having to type lots of redundant stuff). 
+
+To put it slightly differently: You don't need to say for the 157th time
+
+    [lang=csharp]
+    public static void Main(string[] args)
+    {}
+
+because 
+
+    [lang=csharp]
+    public static void Main(string[] args)
+    {}
+
+is always
+
+    [lang=csharp]
+    public static void Main(string[] args)
+    {}
+
+wie es singt und lacht. Let the damn computer figure it out.
+
+In F# a lot of the defaults are the "other way round" from what you may be used 
+to. For example, variables aren't. Once you assign a name to a value by saying 
+`let a = 3`, `a` will have the value of 3 until the end of time. And no, that is not
+a problem, it just takes some getting used to. If you still want `a` to be a 
+"variable", you need to explicitely say so. If you tend to "forget" to look at 
+the return value of function calls, the compiler will politely remind you  
+to pipe the return value to the `ignore` function. 
+You can still keep all your bad habits, you just need to be explicit about them. 
+After a while you might realize that is actually much less work to do the Right Thing, 
+and presto - you have discovered "long-term lazinesss": 
+Doing what is the least amount of work in the long run.
+
+## Coming attractions
 
 If you are still with me, you may ask yourself, "why bother with all this, and
 not write this code directly in C?" Excellent question, simpler is almost
 always better. What F# gives you is the ability to work on higher levels of
 abstraction. Often what you end up with is code that is substantially easier to
-read and understand than C (and also to write, with a little practice). If you
-have been interested in Software Defined Radio, you may have noticed that
-practitioners in the field really seem to like block diagrams, and have devised
-clever tools to write code that way (see for example Gnu Radio Companion). Why?
-A block diagram gives you an appropriate abstraction to understand the signal
-flow in the application, without pesky details like error handling getting in
-the way of your higher level understanding. It is still there, but it is tucked
-away where you don't need to look at it unless you want to.  F# gives you some
-of the tools to separate out your abstractions, so you can get a similar effect
-using textual programming.
+read and understand than C (and also to write, with a little practice). 
 
 Here's another lame analogy for you: Imagine cooking a meal in "cooking show
 style"; rather than having some semi-hostile looking vegetables to deal with,
 every ingredient is nicely peeled, chopped, and available for use in its own
-little glass bowl. In my mind, programming with F# is like that: All the
-ingredients are conveniently arranged for you to be creative with, and focus on
-the outcome. True, it comes with investments (bowls) and some cost (washing
-dishes), but the process is so much more enjoyable, which often leads to better
-outcomes.
+little glass bowl. In my mind, using native libraries from F# is like that: 
+All the ingredients are conveniently arranged for you to be creative with.
+True, you have to deal with all the dishes (writing P/Invoke declarations),
+but once you have done that, the process is so much more enjoyable, which 
+often leads to better outcomes.
 
-### Types without the typing! 
+So in the future, please come back to read about the following attractions that
+I didn't have time to cover today:
 
-### Pipes without the, err... never mind
+* Units! dB, even!!
+* The Hollywood Principle, written in two lines of code!
+* Agents! (non-Hollywood)
+* Asynchronous stuff!
+* Invisible error handling!
+* Listen to your favorite FM station using artisan F# code
 
-### Hide the ugly error handling!
+For comments, feel free to [hit me up on Twitter!](https://twitter.com/janschiefer).
+And in the meantime, you can order yourself one of those great cheapo USB radios!
 
-### Agents!
+## Where to go for more information
+The intersection of F#, P/Invoke and .Net Core is currently a little under-documented. 
+Here are some references I find useful:
 
-### Units!!
+* [Microsoft on native interop in dotnet core](https://docs.microsoft.com/en-us/dotnet/articles/standard/native-interop)
+* [Lots of detail, focused on Mono, but all the mechanisms are the same](http://www.mono-project.com/docs/advanced/pinvoke/)
+* [More advanced: The obscure world of references in F#](http://stackoverflow.com/questions/5028377/understanding-byref-ref-and?rq=1)
+* The book [Expert F# Programming](http://www.apress.com/us/book/9781484207413) has a great chapter on F# and P/Invoke
+* [MSDN article on F# and P/Invoke](https://msdn.microsoft.com/en-us/library/hh304361(v=vs.100).aspx)
 
-## More F# Information
-
-As you may or may not have gathered, the compiler is a powerful beast, and it
-really pays to use its services when writing or editing source code. Regardless
-of what your favorite editor is, there is probably F# support available, with
-smart autocompletion, syntax highlighting and a lot of the other amenities that
-you probably only have seen with full-blown IDEs like Eclipse or IntelliJ. If
-you are not sure where to start, take a look at the excellent VS Code in
-conjunction with the Ionide-FSharp plugin. Another option is monodevelop,
-although the version that ships with your Linux distribution is probably way
-too old.
+No Monads were harmed in the creation of this blog post.
