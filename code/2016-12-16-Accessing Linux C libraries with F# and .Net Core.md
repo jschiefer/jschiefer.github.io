@@ -87,6 +87,7 @@ easier. With .Net, this is also possible (using C#), but rarely necessary.
 
 From a high level, interoperating between a VM language (e.g. F#) and a native languages 
 (e.g. C) requires figuring out several issues:
+
 * What are the library naming conventions on the OS? Where are these libraries stored? 
 How do they get found and loaded?
 * What are the names of the entry points for the functions that are contained in the library?

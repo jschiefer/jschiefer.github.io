@@ -109,21 +109,31 @@ In F#, you can do the equivalent in a few lines of F# code.
 Wrapper generators (such as the excellent <a href="http://swig.org/">SWIG</a>) can make this task
 easier. With .Net, this is also possible (using C#), but rarely necessary.</p>
 <p>From a high level, interoperating between a VM language (e.g. F#) and a native languages
-(e.g. C) requires figuring out several issues:
-<em> What are the library naming conventions on the OS? Where are these libraries stored?
+(e.g. C) requires figuring out several issues:</p>
+<ul>
+<li>
+What are the library naming conventions on the OS? Where are these libraries stored? 
 How do they get found and loaded?
-</em> What are the names of the entry points for the functions that are contained in the library?
-<em> What are the calling conventions, i.e. who is responsible for cleaning up the stack after the
+</li>
+<li>What are the names of the entry points for the functions that are contained in the library?</li>
+<li>
+What are the calling conventions, i.e. who is responsible for cleaning up the stack after the
 invocation, the caller or the callee?
-</em> Is the byte sex the same on both sides (little endian/big endian)
-<em> How do C and F# function arguments correspond? If they are not the same, how are the translated
+</li>
+<li>Is the byte sex the same on both sides (little endian/big endian)</li>
+<li>
+How do C and F# function arguments correspond? If they are not the same, how are the translated
 ("marshalled") into one another?
-</em> If there are structures, how are they aligned in memory? Is there padding between individual elements?
-<em> Who owns any memory blocks that pass the boundary? Who gets to allocate or free them?
-</em> How do you stop important data structures on the VM from getting garbage collected?
-<em> Is it computationally expensive to cross the boundary between VM and native code?
-</em> How do you call back from native code into VM code? Is it OK for any thread to do this, or are
-there special restrictions?</p>
+</li>
+<li>If there are structures, how are they aligned in memory? Is there padding between individual elements?</li>
+<li>Who owns any memory blocks that pass the boundary? Who gets to allocate or free them?</li>
+<li>How do you stop important data structures on the VM from getting garbage collected?</li>
+<li>Is it computationally expensive to cross the boundary between VM and native code?</li>
+<li>
+How do you call back from native code into VM code? Is it OK for any thread to do this, or are
+there special restrictions?
+</li>
+</ul>
 <p>P/Invoke allows you to address most if not all of those questions in a purely declarative manner,
 i.e. without having to write any shims or other adapter libraries. Don't be intimidated by the
 length of this list; once the appropriate declarations are written, it is very comfortable and
