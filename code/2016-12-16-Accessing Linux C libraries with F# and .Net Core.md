@@ -3,6 +3,11 @@ This blog post is part of [Sergey Tihon](https://twitter.com/sergey_tihon)'s
 [F# Advent Calendar in English 2016](https://sergeytihon.wordpress.com/2016/10/23/f-advent-calendar-in-english-2016/).
 Make sure to check out the other awesome posts!
 
+**Update 18 Dec 2016:** Added link to Andrew Arnott's 
+[pinvoke project](https://github.com/AArnott/pinvoke) that collects P/Invoke definitions
+(thanks @ChetHusk for the pointer!), and what seems to be an "official" 
+[P/Invoke library for RTL-SDR](https://github.com/librtlsdr/SharpRTL) in C#.
+
 There are many interesting native libraries available on the Linux platform,
 which are usually accessed directly from C programs. There will likely be more of these 
 in the future; for example, libraries to program custom hardware accelerators, for which no 
@@ -330,5 +335,12 @@ Here are some references I find useful:
 * [More advanced: The obscure world of references in F#](http://stackoverflow.com/questions/5028377/understanding-byref-ref-and?rq=1)
 * The book [Expert F# Programming](http://www.apress.com/us/book/9781484207413) has a great chapter on F# and P/Invoke
 * [MSDN article on F# and P/Invoke](https://msdn.microsoft.com/en-us/library/hh304361(v=vs.100).aspx)
+
+Other projects that have more of a focus on C# and/or Windows:
+
+* The [pinvoke project](https://github.com/AArnott/pinvoke), which collects 
+  P/Invoke definitions from various libraries
+* what seems to be an "official" 
+[P/Invoke library for RTL-SDR](https://github.com/librtlsdr/SharpRTL) in C#.
 
 No Monads were harmed in the creation of this blog post.
